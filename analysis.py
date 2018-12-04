@@ -5,6 +5,8 @@ import itertools
 import multiprocessing as mp
 import h5py
 import os
+import argparse
+
 
 def angle(n1,n2) : 						# calculates the angles between two vectors
     dot = np.dot(n1,n2)				    	# dot product of the vectors
@@ -163,23 +165,24 @@ def structure_analysis(arg):
         dihedrals[icomb] = dihedral(structure[katom,:],structure[iatom,:],structure[jatom,:],structure[latom,:])
     return np.append(bonds,np.append(angles,dihedrals))
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--directories",dest="dirs",type=str,nargs='+',help="MDET calculation directories")
+parser.add_argument("--nHOMO", dest="nHOMO",type=int,help="HOMO level number in FIREBALL calculatio")
+parser.add_argument("--nLUMO",dest="nLUMO",type=int,help="HOMO level number in FIREBALL calculatio")
+parser.add_argument("--nprocessor",dest="np",type=int,help="Number of processors to be used",default=1)
+parser.add_argument("--output",dest="output",type=str,help="output file name",default='output')
+args = parser.parse_args()
 
-
-if len(sys.argv) != 7 : 
-    print("INSTRUCTION: python3.6 analysis.py nHOMO nLUMO nrun nprocessor base_address sub_address")
-    exit()
-base_address = sys.argv[5]
-sub_address = sys.argv[6]
-nrun = int(sys.argv[3])
-nHOMO = int(sys.argv[1])
-nLUMO = int(sys.argv[2])
-
+base_address = os.getcwd()
+nHOMO = args.nHOMO
+nLUMO = args.nLUMO
+dirs  = args.dirs
+nprocess = args.nprocessor
 # initializing the structures
 # at this point I get the first xyz file and figure out what the bonds,angles,dihedrals are
-fxyz = open(base_address+'/'+sub_address+'1/answer.xyz')
+fxyz = open(base_address+os.sep+dirs[0]+os.sep+'answer.xyz')
 xyzlines = fxyz.readlines()
 fxyz.close()
-
 natom = int(xyzlines[0])
 nstep = int(len(xyzlines)/(natom + 2))
 atom_names = np.chararray((natom,))
@@ -201,8 +204,8 @@ positions = []
 occupancy = []
 eigen_values = []
 # the following loop collectes all the positions in array positions
-for irun in range(nrun) : 
-    add = base_address+'/'+sub_address+str(irun+1)+"/answer.xyz"
+for irun in range(len(dirs)) : 
+    add = base_address+os.sep+dirs[irun]+os.sep+"answer.xyz"
     if not(os.path.isfile(add)) : 
         continue
     fxyz = open(add)
@@ -215,8 +218,7 @@ for irun in range(nrun) :
                 lidx = istep*(natom+2)+iatom+2
                 pos_irun[iatom,ix,istep] = float(xyzlines[lidx].split()[ix+1])
     positions.append(pos_irun)
- 
-    add = base_address+'/'+sub_address+str(irun+1)+"/occupancy_MD.dat"
+    add = base_address+os.sep+dirs[irun]+os.sep+"occupancy_MD.dat"
     focc = open(add)
     occ_lines = focc.readlines()
     focc.close()
@@ -226,8 +228,7 @@ for irun in range(nrun) :
             occ[istep,0] = int(float(occ_lines[istep].split()[1]))
             occ[istep,1] = int(float(occ_lines[istep].split()[2]))
     occupancy.append(occ)
-
-    add = base_address+'/'+sub_address+str(irun+1)+"/energies.dat"
+    add = base_address+os.sep+dirs[irun]+os.sep+"energies.dat"
     f_eng = open(add)
     raw_data = f_eng.read()
     mid_data = re.findall("MD\sstep\s=\s*([\d]*)\s*.*.*([-+\d\s.]*)",raw_data)
@@ -246,7 +247,7 @@ for irun in range(len(positions)):
         structure = positions[irun][:,:,istep]
         arg.append([irun,istep,structure])
 ndata = len(positions)*nstep
-fout = h5py.File("MY_DATA_"+str(nrun)+".hdf5","w")
+fout = h5py.File(argparse.output+".hdf5","w")
 dsetX = fout.create_dataset("Data",(ndata,nfeature),dtype='f')
 dsetY = fout.create_dataset("Eigen_Values",(ndata,2),dtype='f')
 dsetO = fout.create_dataset("Occupancy",(ndata,2),'i')
@@ -262,7 +263,7 @@ temp_eigen = np.array(temp_eigen)
 temp_OCC = np.array(temp_OCC)
 dsetY[:,:] = temp_eigen[:,:]
 dsetO[:,:] = temp_OCC[:,:]
-nprocess = int(sys.argv[4])
+
 
 if __name__ == '__main__':
     temp_data = np.zeros((ndata,nfeature))
