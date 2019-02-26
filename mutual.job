@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -q hour
+#PBS -l nodes=1:ppn=1
+#PBS -l pvmem=54gb
+#PBS -m ae
+#PBS -e pathToErrorFile
+#PBS -M ompavlic@mix.wvu.edu
+#PBS -N mi_azoNO2p5_2
+
+source ~/.bashrc
+
+WORKDIR=/scratch/ompavlic/azobenzene/NO2p5
+
+
+cd $WORKDIR
+
+python MI.py --nstate 42 -i output.hdf5 -o NO2p5TOT.hdf5 -ns 100 -nr 10 -np 1
+
+ 

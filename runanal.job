@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -q day 
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=24:00:00
+#PBS -m ae
+#PBS -l pvmem=12gb
+#PBS -e pathToErrorFile
+#PBS -N NO2p5
+
+source ~/.bashrc
+WORKDIR=/scratch/ompavlic/azobenzene/NO2p5
+
+
+cd $WORKDIR
+
+python genanalysisREnergies.py -d /scratch/ompavlic/azobenzene/NO2p5/cis/cis.{1..500} /scratch/ompavlic/azobenzene/NO2p5/trans/trans.{1..500} -np 4 -nb 5 >test.log
+
+
